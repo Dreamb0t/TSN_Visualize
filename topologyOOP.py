@@ -1,4 +1,5 @@
 import sys
+import csv
 import networkx as nx
 from PyQt5.QtWidgets import QApplication, QMainWindow, QGraphicsScene, QGraphicsView, QGraphicsEllipseItem, QGraphicsLineItem,QGraphicsTextItem, QVBoxLayout, QHBoxLayout, QWidget, QComboBox, QPushButton
 from PyQt5.QtGui import QPen, QBrush, QFont
@@ -8,28 +9,45 @@ from PyQt5.QtCore import Qt
 #Node class to encapsulate switches and end statsion. Idea is this is the parent for when we need to distinguish
 #between the child classes Paul Pop's format (PP) and Comcores'(CC) nodes.
 class Node:
-    def __init__(self,name,type):
+    def __init__(self,name,type, port):
         self.name = name
         self.type = type
+        self.port = port
 
     #To give a quick summation of what the object contains also
     def __str__(self):
         return f"{self.name} is a {self.type}"
 
-class PPNode(Node):
-    # We give the child Node the class attribute "format" to distinguish between formats. This should be the same
-    #for all nodes that come from a PP file.
-    format = "PPNode"
-    def __init__(self, name, type,extra):
-        super().__init__(name, type)
-        self.extra = extra
+Node_List = []
 
-    #includes the format
-    def __str__(self):
-        return super().__str__() + ", format is of " + f"{self.format}"
+#TODO make a guide, that tells the user, the csv file should be called something specific 
+#(maybe also have a dedicated path) in the folder
+with open("topology.csv", "r") as f:
+    reader = csv.reader(f)
+    #CSV has format (DeviceType,DeviceName,Ports)
+    for row in reader:
+        # if(row[0]=="SW"):
+        Node_List.append(Node(row[1],row[0], row[3]))
+
+for node in Node_List:
+    print(node)
+
+#TODO see if making chil classes is even necessary
+# class PPNode(Node):
+#     # We give the child Node the class attribute "format" to distinguish between formats. This should be the same
+#     #for all nodes that come from a PP file.
+#     format = "PPNode"
+#     def __init__(self, name, type,extra):
+#         super().__init__(name, type)
+#         self.extra = extra
+
+#     #includes the format
+#     def __str__(self):
+#         return super().__str__() + ", format is of " + f"{self.format}"
 
 #TODO this needs to be move to another file once the general structure is in place to make the code look better.
 
+# S1
 
 class Network:
     def __init__(self):
@@ -38,9 +56,10 @@ class Network:
         self.streams = {}
         self.create_topology()
 
-    
+
     def create_topology(self):
         """ Define the network topology (Switches & Endstations) """
+        # self.graph.add_node()
         # Adding nodes
         self.graph.add_node("S1", pos=(100, 100), type="Switch")
         self.graph.add_node("S2", pos=(300, 100), type="Switch")

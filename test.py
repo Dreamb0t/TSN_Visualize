@@ -31,7 +31,7 @@ with open("topology.csv", "r") as f:
     #CSV has format (DeviceType,DeviceName,Ports)
     for row in reader:
         # if(row[0]=="SW"):
-        Node_List.append(PPNode(row[1],row[0], row[3]))
+        Node_List.append(Node(row[1],row[0], row[3]))
 
 for node in Node_List:
     print(node)
