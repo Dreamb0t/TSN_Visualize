@@ -1,0 +1,2 @@
+Create the list of streams going through each switch
+Showcase the list of streams when clicking on the desired switch

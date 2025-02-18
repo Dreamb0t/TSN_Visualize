@@ -3,6 +3,7 @@ import networkx as nx
 from PyQt5.QtWidgets import QApplication, QMainWindow, QGraphicsScene, QGraphicsView, QGraphicsEllipseItem, QGraphicsLineItem, QVBoxLayout,QHBoxLayout, QWidget, QComboBox, QPushButton
 from PyQt5.QtGui import QPen, QBrush
 from PyQt5.QtCore import Qt
+from enums import *
 
 class NetworkTopology(QMainWindow):
     def __init__(self):
@@ -21,11 +22,11 @@ class NetworkTopology(QMainWindow):
     def create_topology(self):
         """ Define the network topology (Switches & Endstations) """
         # Adding nodes
-        self.graph.add_node("S1", pos=(100, 100), type="Switch")
-        self.graph.add_node("S2", pos=(300, 100), type="Switch")
-        self.graph.add_node("S3", pos=(500, 100), type="Switch")
-        self.graph.add_node("E1", pos=(100, 250), type="EndStation")
-        self.graph.add_node("E2", pos=(500, 250), type="EndStation")
+        self.graph.add_node("S1", pos=(100, 100), type= type.Switch)
+        self.graph.add_node("S2", pos=(300, 100), type= type.Switch)
+        self.graph.add_node("S3", pos=(500, 100), type= type.Switch)
+        self.graph.add_node("E1", pos=(100, 250), type= type.EndStation)
+        self.graph.add_node("E2", pos=(500, 250), type= type.EndStation)
 
         # Adding links
         self.graph.add_edges_from([("S1", "S2"), ("S2", "S3"), ("S1", "E1"), ("S3", "E2"), ("S2","E2")])
@@ -90,7 +91,7 @@ class NetworkTopology(QMainWindow):
         for node, data in self.graph.nodes(data=True):
             x, y = data["pos"]
             item = QGraphicsEllipseItem(x-10, y-10, 20, 20)  # Circle shape
-            item.setBrush(QBrush(Qt.blue if data["type"] == "Switch" else Qt.green))
+            item.setBrush(QBrush(Qt.blue if data["type"] == type.Switch else Qt.green))
             item.setData(0, node)  # Store node name
             item.setFlag(QGraphicsEllipseItem.ItemIsSelectable)
             item.mousePressEvent = self.node_clicked
@@ -103,21 +104,6 @@ class NetworkTopology(QMainWindow):
         node_name = clicked_item.data(0)
         print(f"Clicked on: {node_name}")
 
-    def highlight_path(self, selected_stream):
-        """ Highlight the selected stream path """
-        path = self.streams[selected_stream]
-
-        # Reset colors
-        for line in self.edge_items.values():
-            line.setPen(QPen(Qt.black, 2))
-
-        # Highlight path
-        for i in range(len(path) - 1):
-            edge = (path[i], path[i + 1])
-            if edge in self.edge_items:
-                self.edge_items[edge].setPen(QPen(Qt.red, 3))
-            elif (edge[1], edge[0]) in self.edge_items:  # Reverse lookup
-                self.edge_items[(edge[1], edge[0])].setPen(QPen(Qt.red, 3))
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
