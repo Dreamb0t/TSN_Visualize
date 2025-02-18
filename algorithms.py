@@ -170,9 +170,9 @@ def allStreams(csv_file):
             if(path):
                 print("Path found for:")
                 print(stream_id)
-            #print("---DFS PATH---")
-            #print(len(path))
-            #print(path)
+                print("---DFS PATH---")
+                print(len(path))
+                print(path)
             
 
 
