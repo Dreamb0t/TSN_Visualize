@@ -71,39 +71,37 @@ class UI(QMainWindow):
         print("Checked:", checked)
 
     def draw_topology(self):
-        """ Render the network topology """
+        """Render the network topology using node objects as keys."""
         self.node_items = {}
         self.edge_items = {}
-                # Adding links (Modify as needed)
-
-        # Apply spring layout for better visualization
-        pos = nx.spring_layout(self.network.graph, seed=42, scale=200)  # Adjust scale for spacing
         
-        #TODO Make dynamically scaleable, so given a large network, the spacing should be bigger.
-        # Store computed positions in the graph with an offset to center them
-        for node, (x, y) in pos.items():
-            self.network.graph.nodes[node]["pos"] = (x + 50, y + 50)  # Adjust offsets
-        # Draw edges
+        # Compute positions using spring_layout. Keys are Node objects.
+        pos = nx.spring_layout(self.network.graph, seed=42, scale=200)
+        for node_obj, (x, y) in pos.items():
+            # Store the computed position in the graph data.
+            self.network.graph.nodes[node_obj]["pos"] = (x + 50, y + 50)
+        
+        # Draw edges.
         for edge in self.network.graph.edges:
-            node1, node2 = edge
-            x1, y1 = self.network.graph.nodes[node1.name]['pos']
-            x2, y2 = self.network.graph.nodes[node2.name]['pos']
+            node1, node2 = edge  # Both are Node objects.
+            x1, y1 = self.network.graph.nodes[node1]["pos"]
+            x2, y2 = self.network.graph.nodes[node2]["pos"]
             line = self.scene.addLine(x1, y1, x2, y2, QPen(Qt.black, 2))
             self.edge_items[edge] = line
 
-        # Draw nodes
-        test = self.network.graph.nodes(data=True)
-        for node_name, data in test:
+        # Draw nodes.
+        for node_obj, data in self.network.graph.nodes(data=True):
             if "node_obj" not in data:
-                #print(f"Warning: Missing node data for {node_name}")  # Debugging
-                continue  # Skip this node
-
-            node = data["node_obj"]  # Use the correct key
+                print(f"Warning: Missing node data for {node_obj}")
+                continue
+            # Retrieve the node object and its position.
+            node = data["node_obj"]
             x, y = data["pos"]
             node_item = NodeItem(node, x, y)
             self.scene.addItem(node_item)
             self.scene.addItem(node_item.label)
-            self.node_items[node_name] = node_item
+            self.node_items[node.name] = node_item
+
 
 
     def highlight_path(self, selected_stream):

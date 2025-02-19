@@ -16,59 +16,53 @@ class Network:
         self.load_streams(streamCsv)
 
     def create_topology(self, topologyCSV):
-        """ Define the network topology (Switches & Endstations) """
+        """Define the network topology (Switches & Endstations) using Node objects."""
         with open(topologyCSV, "r") as f:
             reader = csv.reader(f)
             for row in reader:
-                type = row[0]
-                if type == NodeType.LINK.value:
-                    source_node_name = row[2]
-                    source_port = row[3]
+                row_type = row[0].strip()
+                if row_type == NodeType.LINK.value:
+                    # Get source information.
+                    source_node_name = row[2].strip()
+                    source_port = row[3].strip()
+                    # Create or get the source node.
                     if source_node_name not in self.nodes:
                         if source_node_name.startswith(NodeType.SWITCH.value):
                             source_node = Switch(source_node_name, source_port)
-                            self.nodes[source_node_name] = source_node
-                            print("LINKING NODE")
                         else:
                             source_node = EndStation(source_node_name, source_port)
-                            print("LINKING NODE")
-                    destination_node_name = row[4]
-                    destination_node_port = row[5]
+                        self.nodes[source_node_name] = source_node
+                        # Add the node object to the graph.
+                        self.graph.add_node(source_node, node_obj=source_node)
+                    # Get destination information.
+                    destination_node_name = row[4].strip()
+                    destination_node_port = row[5].strip()
                     if destination_node_name not in self.nodes:
                         if destination_node_name.startswith(NodeType.SWITCH.value):
-                            destination_node = Switch(destination_node_name,destination_node_port)
-                            self.nodes[destination_node_name] = destination_node
-                            print("LINKING NODE")
+                            destination_node = Switch(destination_node_name, destination_node_port)
                         else:
-                            destination_node = EndStation(destination_node_name,destination_node_port)
-                            print("LINKING NODE")
-                            self.nodes[destination_node_name] = destination_node
-                    test1 = self.nodes[source_node_name]
-                    test2 = self.nodes[destination_node_name]
-                    self.graph.add_edge(test1, test2)
-                    #print(self.graph.edges)
-                elif type == NodeType.SWITCH.value:
-                    name = row[1]
-                    port = row[3]
+                            destination_node = EndStation(destination_node_name, destination_node_port)
+                        self.nodes[destination_node_name] = destination_node
+                        self.graph.add_node(destination_node, node_obj=destination_node)
+                    # Add the edge using the actual Node objects.
+                    self.graph.add_edge(self.nodes[source_node_name], self.nodes[destination_node_name])
+                elif row_type == NodeType.SWITCH.value:
+                    name = row[1].strip()
+                    port = row[3].strip()
                     switch = Switch(name, port)
                     self.nodes[switch.name] = switch
-                    self.graph.add_node(switch.name, node_obj=switch)
-                    print(switch)
-                elif type == NodeType.ENDSTATION.value:
-                    name = row[1]
-                    port = row[3]
+                    self.graph.add_node(switch, node_obj=switch)
+                elif row_type == NodeType.ENDSTATION.value:
+                    name = row[1].strip()
+                    port = row[3].strip()
                     es = EndStation(name, port)
                     self.nodes[es.name] = es
-                    self.graph.add_node(es.name, node_obj=es)
-                    print(es)
+                    self.graph.add_node(es, node_obj=es)
+
 
     def shortestPath(self, stream: Stream):
-            # Get the names of the source and destination from the stream.
-            source_name = stream.source_node.name
-            destination_name = stream.destination_node.name
-
             # Check that both nodes exist in the graph.
-            if source_name in self.graph and destination_name in self.graph:
+            if stream.source_node in self.graph and stream.destination_node in self.graph:
                 try:
                     # Compute the shortest path using NetworkX.
                     path = nx.shortest_path(self.graph, source=stream.source_node, target=stream.destination_node)
@@ -78,7 +72,7 @@ class Network:
                 path = ["Invalid Nodes"]
 
             #store a small data package in the destination
-            self.nodes[destination_name].arrivals.append({
+            self.nodes[stream.destination_node.name].arrivals.append({
                         "source node name": stream.source_node,   # Reference to the stream
                         #"path": path,
                         "data size": stream.size,       # The computed path
