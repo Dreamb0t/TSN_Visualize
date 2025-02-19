@@ -94,7 +94,7 @@ class UI(QMainWindow):
         test = self.network.graph.nodes(data=True)
         for node_name, data in test:
             if "node_obj" not in data:
-                print(f"Warning: Missing node data for {node_name}")  # Debugging
+                #print(f"Warning: Missing node data for {node_name}")  # Debugging
                 continue  # Skip this node
 
             node = data["node_obj"]  # Use the correct key

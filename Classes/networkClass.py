@@ -1,5 +1,7 @@
 import networkx as nx
 import csv
+from datetime import datetime
+from networkx import shortest_path
 
 from .nodeClass import Node, Switch, EndStation
 from .streamClass import Stream
@@ -60,9 +62,29 @@ class Network:
                     self.graph.add_node(es.name, node_obj=es)
                     print(es)
 
+    def shortestPath(self, stream: Stream):
+            # Get the names of the source and destination from the stream.
+            source_name = stream.source_node.name
+            destination_name = stream.destination_node.name
 
-                
+            # Check that both nodes exist in the graph.
+            if source_name in self.graph and destination_name in self.graph:
+                try:
+                    # Compute the shortest path using NetworkX.
+                    path = nx.shortest_path(self.graph, source=stream.source_node, target=stream.destination_node)
+                except nx.NetworkXNoPath:
+                    path = ["No Path Found"]
+            else:
+                path = ["Invalid Nodes"]
 
+            #store the computed path in the stream's record.
+            self.nodes[destination_name].arrivals.append({
+                        "source node name": stream.source_node,   # Reference to the stream
+                        #"path": path,
+                        "data size": stream.size,       # The computed path
+                        "arrival_time":  datetime.now() # Optionally, compute an arrival time here
+                    })
+            self.streams[stream.stream_name].path = path
 
     def load_streams(self, streamsCSV):
         #TODO
@@ -71,23 +93,32 @@ class Network:
             reader = csv.reader(f)
             next(reader)  # Skip header row
             for row in reader:
+                pcp = row[0]
                 stream_name = row[1]
-                source_node = self.nodes[row[3]]
-                destination_node = self.nodes[row[4]]
+                stream_type = row[2]
 
-                if source_node in self.graph and destination_node in self.graph:
-                    try:
-                        path = nx.shortest_path(self.graph, source=source_node, target=destination_node)
-                    except nx.NetworkXNoPath:
-                        path = ["No Path Found"]
-                else:
-                    path = ["Invalid Nodes"]
+                source_node_name = row[3]
+                source_node = self.nodes[source_node_name]
 
-                self.streams[stream_name] = Stream(stream_name, source_node, destination_node)
-                self.streams[stream_name].path = path
-                #print(path)
+                destination_node_name = row[4]
+                destination_node = self.nodes[destination_node_name]
+
+                size = row[5]
+                period = row[6]
+                deadline = row[7]
+
+                s = Stream(pcp, stream_name, stream_type, source_node, destination_node, size, period, deadline)
+                self.streams[stream_name] = s
+                self.shortestPath(s)
+
+    
 
     def get_stream_path(self, stream_name):
         """ Retrieve the shortest path for a given stream """
-        return self.streams.get(stream_name, Stream("", "", "")).path
+        path = self.streams.get(stream_name).path
+        print(path)
+        print(path[0])
+        lastnode = path[-1]
+        print(lastnode)
+        return path
     

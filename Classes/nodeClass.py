@@ -6,6 +6,9 @@ class Node:
         self.type = type
         self.port = port
 
+    def __repr__(self):
+        return self.name
+    
     def __str__(self):
         return f"{self.name} ({self.type}, Port: {self.port})"
     
@@ -17,10 +20,11 @@ class EndStation(Node):
 
     def __str__(self):
         arrival_info = ", ".join(
-            f"{rec['source']} -> {rec['target']} at {rec['arrival_time']}" 
+            f"{rec['source node name']} -> {rec['data size']} at {rec['arrival_time']}"
             for rec in self.arrivals
         )
         return f"{self.name} ({self.type}), Arrivals: [{arrival_info}]"
+
 
 # Switch class extends Node and stores a reference to the preceding node and package send info.
 class Switch(Node):
