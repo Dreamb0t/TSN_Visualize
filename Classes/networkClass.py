@@ -77,7 +77,7 @@ class Network:
             else:
                 path = ["Invalid Nodes"]
 
-            #store the computed path in the stream's record.
+            #store a small data package in the destination
             self.nodes[destination_name].arrivals.append({
                         "source node name": stream.source_node,   # Reference to the stream
                         #"path": path,
@@ -85,6 +85,24 @@ class Network:
                         "arrival_time":  datetime.now() # Optionally, compute an arrival time here
                     })
             self.streams[stream.stream_name].path = path
+            self.trafficSwitches(stream.stream_name)
+
+    def trafficSwitches(self, stream_id):
+        """
+        Given a path, for each switch node in the path,
+        add the immediately preceding node to that switch's traffic.
+        """
+        stream = self.streams[stream_id]
+        path = stream.path
+        # Start from index 1 because the first node (index 0) doesn't have a previous node and is anlways an endstation.
+        for i in range(1, len(path)):
+            current_node = path[i]
+            # Check if current node is a switch.
+            if current_node.type == NodeType.SWITCH:
+                previous_node = path[i-1]
+                current_node.add_traffic(stream_id, previous_node, stream.size, stream.deadline)
+
+                
 
     def load_streams(self, streamsCSV):
         #TODO

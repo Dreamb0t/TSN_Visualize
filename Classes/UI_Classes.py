@@ -1,6 +1,7 @@
 from PyQt5.QtGui import QPen, QBrush, QFont
 from PyQt5.QtWidgets import QApplication, QMainWindow, QGraphicsScene, QGraphicsView, QGraphicsEllipseItem, QGraphicsTextItem, QVBoxLayout, QHBoxLayout, QWidget, QComboBox, QPushButton
 from PyQt5.QtGui import QPen, QBrush, QFont
+from PyQt5.QtWidgets import QMainWindow, QTextEdit, QVBoxLayout, QWidget
 from PyQt5.QtCore import Qt
 import networkx as nx
 from enums.deviceEnums import NodeType
@@ -21,7 +22,7 @@ class NodeItem(QGraphicsEllipseItem):
 
     def mousePressEvent(self, event):
         print(f"Clicked on: {self.node.name}, Type: {self.node.type.value}, Port: {self.node.port}")
-        self.window2 = SecondUI(self.node.name)  # Store a reference on 'self'
+        self.window2 = SecondUI(self.node)  # Store a reference on 'self'
         self.window2.show()
 
 
@@ -122,7 +123,39 @@ class UI(QMainWindow):
                 self.edge_items[(edge[1], edge[0])].setPen(QPen(Qt.red, 3))
 
 class SecondUI(QMainWindow):
-    def __init__(self, name):
+    def __init__(self, node):
         super().__init__()
-        self.setWindowTitle(name)
+        self.node = node
+        self.setWindowTitle(node.name)
         self.setGeometry(200, 200, 800, 600)
+        self.initUI()
+
+    def initUI(self):
+        centralWidget = QWidget(self)
+        self.setCentralWidget(centralWidget)
+        layout = QVBoxLayout(centralWidget)
+        
+        # Create a read-only text edit to display traffic
+        self.textEdit = QTextEdit()
+        self.textEdit.setReadOnly(True)
+        layout.addWidget(self.textEdit)
+        
+        # Format and set the traffic information in the text edit
+        self.textEdit.setText(self.formatTraffic())
+
+    def formatTraffic(self):
+        # Check if traffic data exists.
+        if not self.node.traffic:
+            return "No traffic available."
+
+        # Build a formatted string from the node's traffic dictionary.
+        lines = []
+        for stream_id, info in self.node.traffic.items():
+            # Get the previous node's name if available.
+            previous_node = info.get('previous_node')
+            previous_node_name = previous_node.name if previous_node else "None"
+            data_size = info.get('data_size', "N/A")
+            time = info.get('time', "N/A")
+            line = f"Stream: {stream_id} | From: {previous_node_name} | Data Size: {data_size} | Time: {time}"
+            lines.append(line)
+        return "\n".join(lines)

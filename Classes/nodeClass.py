@@ -26,19 +26,35 @@ class EndStation(Node):
         return f"{self.name} ({self.type}), Arrivals: [{arrival_info}]"
 
 
-# Switch class extends Node and stores a reference to the preceding node and package send info.
 class Switch(Node):
     def __init__(self, name, port):
         super().__init__(name, NodeType.SWITCH, port)
-        self.preceding_node = None  # Reference to the node immediately before this switch.
-        self.sent_packages = []     # List of package send events.
+        self.traffic = {}  # Dictionary mapping stream id -> { 'previous_node': Node, 'data_size': value, 'time': value }
+       #self.sent_packages = []  
 
-    
+    def add_traffic(self, stream_id, previous_node, data_size, time):
+        """
+        Records traffic information for a given stream.
+        
+        Args:
+            stream_id (str): The identifier of the stream.
+            previous_node (Node): The node immediately preceding this switch for that stream.
+            data_size: The size of the data (could be an int, float, etc.).
+            time: The time at which the data was sent/received.
+        """
+        self.traffic[stream_id] = {
+            'previous_node': previous_node,
+            'data_size': data_size,
+            'time': time
+        }
 
     def __str__(self):
-        preceding = self.preceding_node.name if self.preceding_node else "None"
-        package_info = ", ".join(
-            f"{rec['source']} at {rec['send_time']} (size: {rec['package_size']})"
-            for rec in self.sent_packages
+        # For a switch, if it has a preceding node (set via set_preceding_node), display it.
+        preceding = self.preceding_node.name if hasattr(self, 'preceding_node') and self.preceding_node else "None"
+        # Build a string representing the traffic dictionary.
+        traffic_info = ", ".join(
+            f"{stream_id}: from {info['previous_node'].name if info['previous_node'] else 'None'} "
+            f"(size: {info['data_size']}, time: {info['time']})"
+            for stream_id, info in self.traffic.items()
         )
-        return f"{self.name} ({self.type}), Preceding: {preceding}, Sent Packages: [{package_info}]"
+        return f"{self.name} ({self.type}), Preceding: {preceding}, Traffic: [{traffic_info}]"
