@@ -1,9 +1,10 @@
 import csv
 import networkx as nx
-from node import Node  # Your Node class with in_edges and out_edges lists
 from enums import NodeType
+from node import *
+from streamClass import Stream
 
-graph = nx.DiGraph(name = "Links")
+graph = nx.DiGraph(name="Links")
 
 def create_graph_from_csv(csv_file):
     """
@@ -16,44 +17,48 @@ def create_graph_from_csv(csv_file):
     Expected CSV row format:
       [row_type, name, source, int, target, int, int]
     
+    Also, if the target node is a switch, its preceding node is set to the source node.
+    
     Returns:
-        A tuple (nodes, graph)
-          - nodes: a dictionary mapping node names to Node objects.
-          - graph: a NetworkX DiGraph constructed from the links.
+        A dictionary mapping node names to Node objects.
     """
     nodes = {}
-    
     
     with open(csv_file, newline='') as f:
         reader = csv.reader(f, delimiter=',')
         for row in reader:
-            # Process only rows that are of type LINK.
+            # Process only rows of type LINK.
             if row[0].strip() != NodeType.LINK.value:
                 continue
 
-            # Extract fields from CSV.
+            # Extract fields.
             source_name = row[2].strip()
             target_name = row[4].strip()
             
             # Create or get the source node.
             if source_name not in nodes:
-                # Decide type based on naming convention (or other CSV data)
                 if source_name.startswith(NodeType.SWITCH.value):
-                    source_type = NodeType.SWITCH
+                    nodes[source_name] = Switch(source_name)
                 else:
-                    source_type = NodeType.ENDSTATION
-                nodes[source_name] = Node(source_name, source_type)
-                graph.add_node(source_name, type=source_type.value)
+                    nodes[source_name] = EndStation(source_name)
+                graph.add_node(nodes[source_name])
+            
             # Create or get the target node.
             if target_name not in nodes:
                 if target_name.startswith(NodeType.SWITCH.value):
-                    target_type = NodeType.SWITCH
+                    nodes[target_name] = Switch(target_name)
+                    # Set the preceding node for a switch target.
+                    nodes[target_name].set_preceding_node(nodes[source_name])
                 else:
-                    target_type = NodeType.ENDSTATION
-                nodes[target_name] = Node(target_name, target_type)
-                graph.add_node(target_name, type=target_type.value)
+                    nodes[target_name] = EndStation(target_name)
+                graph.add_node(nodes[target_name])
+            else:
+                # If the target is already a switch and doesn't have a preceding node, update it.
+                node_obj = nodes[target_name]
+                if node_obj.type == NodeType.SWITCH and (not node_obj.preceding_node):
+                    node_obj.set_preceding_node(nodes[source_name])
             
-            # Update the Node objects.
+            # Update the node objects: add out edge for source, in edge for target.
             nodes[source_name].add_out_edge(target_name)
             nodes[target_name].add_in_edge(source_name)
             
@@ -62,131 +67,144 @@ def create_graph_from_csv(csv_file):
     
     return nodes
 
-def dfs_traverse_target(node, nodes, target, visited=None, path=None):
+def _dfs_traverse(node, nodes, target_id, stream, visited, path, prev):
     """
-    Recursively traverses the graph using DFS until the target node is reached.
+    Helper recursive DFS function.
     
     Args:
-        node: The current Node object to visit.
-        nodes: A dictionary mapping node names to Node objects.
-        target: The name of the target node to reach.
-        visited: A set of node names that have been visited.
-        path: The current path as a list of node names.
-    
+        node: The current Node object.
+        nodes: Dictionary mapping node names to Node objects.
+        target_id: The identifier (string) of the target node.
+        stream: The Stream object.
+        visited: Set of visited node names.
+        path: Current path (list of node names).
+        prev: The Node from which we arrived at the current node.
+        
     Returns:
-        A list representing the path from the starting node to the target node,
-        or None if no such path exists.
+        A list of node names representing the path if target is reached; otherwise None.
     """
-    if visited is None:
-        visited = set()
-    if path is None:
-        path = []
-    
-    # Add the current node to the path.
+    # Update the path.
     path = path + [node.name]
     
-    # If we've reached the target, return the path.
-    if node.name == target.name:
-        #print("---------FOUND---------")
+    # If this node is a switch, record its preceding node.
+    if node.type == NodeType.SWITCH and prev is not None:
+        node.set_preceding_node(prev)
+    
+    # If we've reached the target, record the stream size at the destination and return the path.
+    if node.name == target_id:
+        # For example, store the stream size in an attribute (you may adjust as needed).
+        node.stream_size = stream.size
         return path
     
-    # Mark this node as visited.
     visited.add(node.name)
-    #print(node.name)
-    # Define children as the union of outgoing and ingoing edges.
+    # Get children as union of out_edges and in_edges; sort for determinism.
     children = sorted(set(node.out_edges + node.in_edges))
-    
-    # Recursively search for the target in each child.
     for child_name in children:
         if child_name not in visited:
             child_node = nodes.get(child_name)
             if child_node:
-                result = dfs_traverse_target(child_node, nodes, target, visited, path)
+                result = _dfs_traverse(child_node, nodes, target_id, stream, visited, path, node)
                 if result is not None:
                     return result
     return None
 
+def dfs_traverse_stream(nodes, stream):
+    """
+    Traverses the graph using DFS based solely on the stream's data.
+    
+    Args:
+        nodes: Dictionary mapping node names to Node objects.
+        stream: A Stream object that contains source_node and destination_node.
+        
+    Returns:
+        A list representing the path (list of node names) from stream.source_node to stream.destination_node,
+        or None if no path is found.
+    """
+    start_node = stream.source_node
+    if not start_node:
+        print(f"Source node {stream.source_node.name} not found.")
+        return None
+    target_id = stream.destination_node
+    return _dfs_traverse(start_node, nodes, target_id, stream, visited=set(), path=[], prev=None)
+
+
 def bfs_traverse_target(source_node, nodes, target):
     """
-    Traverses the graph using BFS to find the shortest path from source_node to target.
+    Uses BFS to find the shortest path from source_node to the target node.
     
     Args:
         source_node: The starting Node object.
-        nodes: A dictionary mapping node names to Node objects.
-        target: The name of the target node.
+        nodes: Dictionary mapping node names to Node objects.
+        target: The name (string) of the target node.
         
     Returns:
-        A list of node names representing the path from the source to the target,
-        or None if no path exists.
+        A list of node names representing the path, or None if no path is found.
     """
-    # Initialize a queue with the starting path.
     queue = [[source_node.name]]
-    
-    # A set to keep track of visited nodes.
     visited = set()
     
     while queue:
-        # Pop the first path from the queue.
         path = queue.pop(0)
         last_node_name = path[-1]
-        
-        # If we've reached the target, return the path.
         if last_node_name == target:
             return path
-        
-        # Mark the current node as visited.
         if last_node_name not in visited:
             visited.add(last_node_name)
-            
-            # Get the current node.
             current_node = nodes.get(last_node_name)
             if current_node:
-                # Get all children (neighbors) as the union of in_edges and out_edges.
                 children = sorted(set(current_node.out_edges + current_node.in_edges))
                 for child in children:
-                    # Avoid cycles: only add child if it's not already in the current path.
                     if child not in path:
                         new_path = path + [child]
                         queue.append(new_path)
-                        
-    # No path found.
     return None
 
 def allStreams(csv_file):
+    """
+    Processes a streams CSV file with the following structure:
+      PCP, StreamName, StreamType, SourceNode, DestinationNode, Size, Period, Deadline
+    For each stream, it finds a path (using DFS) from the source node to the destination node.
+    """
     with open(csv_file, newline='') as f:
         reader = csv.reader(f, delimiter=',')
         for row in reader:
-            stream_id = row[1]
-            # Extract fields from CSV.
+            # Unpack the stream details.
+            pcp = row[0].strip()
+            stream_id = row[1].strip()
+            stream_type = row[2].strip()
+            source_node = nodes[row[3].strip()]
+            target_node = nodes[row[4].strip()]
+            size = row[5].strip()
+            period = row[6].strip()
+            deadline = row[7].strip()
 
-            source = row[3].strip()
-            target = row[4].strip()
+            s = Stream(pcp, stream_id, stream_type, source_node, target_node, size, period, deadline)
+            # Get the source and target Node objects.
 
-                # Example: prompt the user for source and target nodes.
-            source_node = nodes[source]#input("Enter the source node: ").strip()
-            target_node = nodes[target]#input("Enter the target node: ").strip()
-            path = dfs_traverse_target(source_node, nodes, target_node)
-            #path2 = bfs_traverse_target(source_node, nodes, target_node)
-            if(path):
-                print("Path found for:")
-                print(stream_id)
-                print("---DFS PATH---")
-                print(len(path))
-                print(path)
+            if not source_node or not target_node:
+                print(f"Stream {stream_id}: Source or target node not found.")
+                continue
             
+            path = dfs_traverse_stream(nodes, s)
+            if path:
+                print("Stream:", s.stream_name)
+                print("---DFS PATH---")
+                print("Nodes traversed:", len(path))
+                print(" -> ".join(path))        
+                # Optionally, print target node's stored stream size:
+                target_node = nodes.get(s.destination_node)
+                if target_node and hasattr(target_node, 'stream_size'):
+                    print(f"Target {target_node.name} stored stream size: {target_node.stream_size}")
+                else:
+                    print(f"Stream {s.stream_name}: No path found from {s.source_node} to {s.destination_node}.")
 
-
+# Main execution
 if __name__ == "__main__":
-    csv_file_path = "topology.csv"  # Replace with your CSV file path
+    csv_file_path = "topology.csv"  # CSV with LINK rows
     nodes = create_graph_from_csv(csv_file_path)
     
-
-
-    #nx.draw(graph)
-
+    # Uncomment the following if you wish to draw the graph with NetworkX:
+    # nx.draw(graph, with_labels=True)
+    
     print("DFS traversal starting")
     allStreams("streams.csv")
-    #print("------- BFS PATH---------")
-    #print(len(path2))
-    #print(path2)
-    
