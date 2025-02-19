@@ -139,8 +139,24 @@ class SecondUI(QMainWindow):
         layout.addWidget(self.textEdit)
         
         # Format and set the traffic information in the text edit
-        self.textEdit.setText(self.formatTraffic())
+        if self.node.type == NodeType.SWITCH:
+            self.textEdit.setText(self.formatTraffic())
+        else:
+            self.textEdit.setText(self.formatArrivalTimes())
 
+    def formatArrivalTimes(self):
+        if not self.node.arrivals:
+            return "No arrivals recorded."
+        formatted_arrivals = []
+        for rec in self.node.arrivals:
+            # Use .get() to provide defaults if keys are missing
+            source = rec.get("source node name", "Unknown")
+            data_size = rec.get("data size", "N/A")
+            arrival_time = rec.get("arrival_time", "N/A")
+            formatted_arrivals.append(f"{source} -> {data_size} at {arrival_time}")
+        return "\n".join(formatted_arrivals)
+
+    
     def formatTraffic(self):
         # Check if traffic data exists.
         if not self.node.traffic:

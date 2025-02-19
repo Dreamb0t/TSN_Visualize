@@ -76,7 +76,7 @@ class Network:
                         "source node name": stream.source_node,   # Reference to the stream
                         #"path": path,
                         "data size": stream.size,       # The computed path
-                        "arrival_time":  datetime.now() # Optionally, compute an arrival time here
+                        "arrival_time":  stream.deadline 
                     })
             self.streams[stream.stream_name].path = path
             self.trafficSwitches(stream.stream_name)
