@@ -1,96 +1,9 @@
-import sys
-import csv
-import networkx as nx
+from PyQt5.QtGui import QPen, QBrush, QFont
 from PyQt5.QtWidgets import QApplication, QMainWindow, QGraphicsScene, QGraphicsView, QGraphicsEllipseItem, QGraphicsTextItem, QVBoxLayout, QHBoxLayout, QWidget, QComboBox, QPushButton
 from PyQt5.QtGui import QPen, QBrush, QFont
 from PyQt5.QtCore import Qt
+from .nodeClass import Node
 
-topologyCSV = "topology.csv"
-streamsCSV = "streams.csv"
-
-class Stream:
-    def __init__(self, name, source_node, destination_node):
-        self.name = name
-        self.source = source_node
-        self.destination = destination_node
-        self.path = []
-
-class Node:
-    def __init__(self, name, type, port):
-        self.name = name
-        self.type = type
-        self.port = port
-
-    def __str__(self):
-        return f"{self.name} ({self.type}, Port: {self.port})"
-
-class Network:
-    def __init__(self):
-        self.graph = nx.Graph()
-        self.nodes = {}  # Store nodes as objects
-        self.streams = {}
-        self.create_topology()
-        self.load_streams()
-
-    def create_topology(self):
-        """ Define the network topology (Switches & Endstations) """
-        with open(topologyCSV, "r") as f:
-            reader = csv.reader(f)
-            for row in reader:
-                type = row[0]
-                name = row[1]
-                port = row[3]
-
-                #Adds edges
-                if row[0] == "LINK":
-                    source_node =row[2]
-                    destination_node = row[4]
-                    self.graph.add_edge(source_node, destination_node)
-                
-                else:
-                    node = Node(name, type, port)  # Create a Node object
-                    self.nodes[node.name] = node  # Store Node object
-                    self.graph.add_node(node.name, node_obj=node)
-
-                print(node)
-                
-        # Adding links (Modify as needed)
-
-        # Apply spring layout for better visualization
-        pos = nx.spring_layout(self.graph, seed=42, scale=400)  # Adjust scale for spacing
-        
-        #TODO Make dynamically scaleable, so given a large network, the spacing should be bigger.
-        # Store computed positions in the graph with an offset to center them
-        for node, (x, y) in pos.items():
-            self.graph.nodes[node]["pos"] = (x + 50, y + 50)  # Adjust offsets
-
-    def load_streams(self):
-        #TODO
-        """ Load streams from CSV and compute shortest paths """
-        with open(streamsCSV, "r") as f:
-            reader = csv.reader(f)
-            next(reader)  # Skip header row
-            for row in reader:
-                stream_name = row[1]
-                source_node = row[3]
-                destination_node = row[4]
-
-                if source_node in self.graph and destination_node in self.graph:
-                    try:
-                        path = nx.shortest_path(self.graph, source=source_node, target=destination_node)
-                    except nx.NetworkXNoPath:
-                        path = ["No Path Found"]
-                else:
-                    path = ["Invalid Nodes"]
-
-                self.streams[stream_name] = Stream(stream_name, source_node, destination_node)
-                self.streams[stream_name].path = path
-                print(path)
-
-    def get_stream_path(self, stream_name):
-        """ Retrieve the shortest path for a given stream """
-        return self.streams.get(stream_name, Stream("", "", "")).path
-    
 class NodeItem(QGraphicsEllipseItem):
     def __init__(self, node: Node, x, y):
         super().__init__(x - 10, y - 10, 20, 20)  # Circle shape
@@ -106,7 +19,8 @@ class NodeItem(QGraphicsEllipseItem):
 
     def mousePressEvent(self, event):
         print(f"Clicked on: {self.node.name}, Type: {self.node.type}, Port: {self.node.port}")
-        window2.show()
+        self.window2 = SecondUI(self.node.name)  # Store a reference on 'self'
+        self.window2.show()
 
 class UI(QMainWindow):
     def __init__(self, network):
@@ -196,15 +110,7 @@ class UI(QMainWindow):
                 self.edge_items[(edge[1], edge[0])].setPen(QPen(Qt.red, 3))
 
 class SecondUI(QMainWindow):
-    def __init__(self):
+    def __init__(self, name):
         super().__init__()
-        self.setWindowTitle("Test")
+        self.setWindowTitle(name)
         self.setGeometry(200, 200, 800, 600)
-
-if __name__ == "__main__":
-    app = QApplication(sys.argv)
-    network = Network()
-    window = UI(network)
-    window.show()
-    window2 = SecondUI()
-    sys.exit(app.exec_())
