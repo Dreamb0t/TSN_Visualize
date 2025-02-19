@@ -1,11 +1,14 @@
 import sys
 import csv
 import networkx as nx
-from PyQt5.QtWidgets import QApplication, QMainWindow, QGraphicsScene, QGraphicsView, QGraphicsEllipseItem, QGraphicsLineItem, QGraphicsTextItem, QVBoxLayout, QHBoxLayout, QWidget, QComboBox, QPushButton
+from PyQt5.QtWidgets import QApplication, QMainWindow, QGraphicsScene, QGraphicsView, QGraphicsEllipseItem, QGraphicsTextItem, QVBoxLayout, QHBoxLayout, QWidget, QComboBox, QPushButton
 from PyQt5.QtGui import QPen, QBrush, QFont
 from PyQt5.QtCore import Qt
 
 topologyCSV = "topology.csv"
+class Stream:
+    def __init__(self, source_node, destination_node):
+        pass
 
 class Node:
     def __init__(self, name, type, port):
@@ -28,27 +31,37 @@ class Network:
         with open(topologyCSV, "r") as f:
             reader = csv.reader(f)
             for row in reader:
-                if row[0] == "LINK":
-                    continue
-                node = Node(row[1], row[0], row[3])  # Create a Node object
-                self.nodes[node.name] = node  # Store Node object
+                type = row[0]
+                name = row[1]
+                port = row[3]
+
+
+                if row[0] == "LINK": #TODO add the edges
+                    source_node =row[2]
+                    destination_node = row[4]
+                    self.graph.add_edge(source_node, destination_node)
+                
+                else:
+                    node = Node(name, type, port)  # Create a Node object
+                    self.nodes[node.name] = node  # Store Node object
+                    self.graph.add_node(node.name, node_obj=node)
+
                 print(node)
+                
+        # Adding links (Modify as needed)
 
-        # Dynamically assign positions (for visualization)
-        x, y = 100, 100
-        spacing = 200
-        for node_name, node in self.nodes.items():
-            self.graph.add_node(node_name, pos=(x, y), node=node)
-            x += spacing
+        # Apply spring layout for better visualization
+        pos = nx.spring_layout(self.graph, seed=42, scale=400)  # Adjust scale for spacing
 
-        # Adding links (Example: Modify as needed)
-        self.graph.add_edges_from([("sw_0_0", "sw_0_3"), ("sw_0_3", "sw_0_5")])
+        # Store computed positions in the graph with an offset to center them
+        for node, (x, y) in pos.items():
+            self.graph.nodes[node]["pos"] = (x + 50, y + 50)  # Adjust offsets
 
         # Predefine paths (Streams)
-        self.streams = {
-            "Stream1": ["E1", "S1", "S2", "S3", "E2"],
-            "Stream2": ["E1", "S1", "S3", "E2"]
-        }
+        # self.streams = {
+        #     "Stream1": ["E1", "S1", "S2", "S3", "E2"],
+        #     "Stream2": ["E1", "S1", "S3", "E2"]
+        # }
 
     def get_stream_path(self, stream_name):
         return self.streams.get(stream_name, [])
@@ -57,7 +70,7 @@ class NodeItem(QGraphicsEllipseItem):
     def __init__(self, node: Node, x, y):
         super().__init__(x - 10, y - 10, 20, 20)  # Circle shape
         self.node = node  # Store the Node instance
-        self.setBrush(QBrush(Qt.blue if node.type == "SWITCH" else Qt.green))
+        self.setBrush(QBrush(Qt.blue if node.type == "SW" else Qt.green))
         self.setFlag(QGraphicsEllipseItem.ItemIsSelectable)
 
         # Create a label for the node
@@ -129,12 +142,17 @@ class UI(QMainWindow):
 
         # Draw nodes
         for node_name, data in self.network.graph.nodes(data=True):
-            node = data["node"]  # Get Node instance
+            if "node_obj" not in data:
+                print(f"Warning: Missing node data for {node_name}")  # Debugging
+                continue  # Skip this node
+
+            node = data["node_obj"]  # Use the correct key
             x, y = data["pos"]
             node_item = NodeItem(node, x, y)
             self.scene.addItem(node_item)
             self.scene.addItem(node_item.label)
             self.node_items[node_name] = node_item
+
 
     def highlight_path(self, selected_stream):
         """ Highlight the selected stream path """
