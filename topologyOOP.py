@@ -18,20 +18,6 @@ class Node:
     def __str__(self):
         return f"{self.name} is a {self.type}"
 
-Node_List = []
-
-#TODO make a guide, that tells the user, the csv file should be called something specific 
-#(maybe also have a dedicated path) in the folder
-with open("topology.csv", "r") as f:
-    reader = csv.reader(f)
-    #CSV has format (DeviceType,DeviceName,Ports)
-    for row in reader:
-        # if(row[0]=="SW"):
-        Node_List.append(Node(row[1],row[0], row[3]))
-
-for node in Node_List:
-    print(node)
-
 #TODO see if making chil classes is even necessary
 # class PPNode(Node):
 #     # We give the child Node the class attribute "format" to distinguish between formats. This should be the same
@@ -47,8 +33,6 @@ for node in Node_List:
 
 #TODO this needs to be move to another file once the general structure is in place to make the code look better.
 
-# S1
-
 class Network:
     def __init__(self):
         """ Initialize the network graph and its topology """
@@ -56,16 +40,41 @@ class Network:
         self.streams = {}
         self.create_topology()
 
-
     def create_topology(self):
         """ Define the network topology (Switches & Endstations) """
-        # self.graph.add_node()
+        node_list = []
+        #TODO make a guide, that tells the user, the csv file should be called something specific 
+        #(maybe also have a dedicated path) in the folder
+        with open("topology.csv", "r") as f:
+            reader = csv.reader(f)
+            #CSV has format (DeviceType,DeviceName,Ports)
+            for row in reader:
+                if(row[0]=="LINK"):
+                    continue
+                else:
+                    node_list.append(Node(row[1],row[0], row[3]))
+
+        for node in node_list:
+            print(node)
+
+        # Dynamically assign positions (for visualization)
+        x, y = 100, 100  # Starting coordinates
+        spacing = 200  # Spacing between nodes
+        
+        node_positions = {}  # Store positions
+        
+        # Add nodes from Node_List
+        for node in node_list:
+            node_positions[node.name] = (x, y)
+            self.graph.add_node(node.name, pos=(x, y), type=node.type)
+            x += spacing  # Shift position for the next node
+
         # Adding nodes
-        self.graph.add_node("S1", pos=(100, 100), type="Switch")
-        self.graph.add_node("S2", pos=(300, 100), type="Switch")
-        self.graph.add_node("S3", pos=(500, 100), type="Switch")
-        self.graph.add_node("E1", pos=(100, 250), type="EndStation")
-        self.graph.add_node("E2", pos=(500, 250), type="EndStation")
+        # self.graph.add_node("S1", pos=(100, 100), type="Switch")
+        # self.graph.add_node("S2", pos=(300, 100), type="Switch")
+        # self.graph.add_node("S3", pos=(500, 100), type="Switch")
+        # self.graph.add_node("E1", pos=(100, 250), type="EndStation")
+        # self.graph.add_node("E2", pos=(500, 250), type="EndStation")
 
         # Adding links
         self.graph.add_edges_from([("S1", "S2"), ("S2", "S3"), ("S1", "E1"), ("S3", "E2"), ("S2", "E2")])
@@ -86,7 +95,7 @@ class NodeItem(QGraphicsEllipseItem):
         super().__init__(x - 10, y - 10, 20, 20)  # Circle shape
         self.node_name = node_name
         self.node_type = node_type
-        self.setBrush(QBrush(Qt.blue if node_type == "Switch" else Qt.green))
+        self.setBrush(QBrush(Qt.blue if node_type == "SW" else Qt.green))
         self.setFlag(QGraphicsEllipseItem.ItemIsSelectable)
 
         # Create a label for the node
@@ -161,7 +170,7 @@ class UI(QMainWindow):
         # Draw edges (Links)
         for edge in self.network.graph.edges:
             node1, node2 = edge
-            x1, y1 = self.network.graph.nodes[node1]['pos']
+            x1, y1 = self.network.graph.nodes[node1]
             x2, y2 = self.network.graph.nodes[node2]['pos']
             line = self.scene.addLine(x1, y1, x2, y2, QPen(Qt.black, 2))
             self.edge_items[edge] = line
