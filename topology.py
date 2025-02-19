@@ -5,10 +5,15 @@ from PyQt5.QtWidgets import QApplication, QMainWindow, QGraphicsScene, QGraphics
 from PyQt5.QtGui import QPen, QBrush, QFont
 from PyQt5.QtCore import Qt
 
-topologyCSV = "topology.csv"
+topologyCSV = "topology_big.csv"
+streamsCSV = "stream_big.csv"
+
 class Stream:
-    def __init__(self, source_node, destination_node):
-        pass
+    def __init__(self, name, source_node, destination_node):
+        self.name = name
+        self.source = source_node
+        self.destination = destination_node
+        self.path = []
 
 class Node:
     def __init__(self, name, type, port):
@@ -25,6 +30,7 @@ class Network:
         self.nodes = {}  # Store nodes as objects
         self.streams = {}
         self.create_topology()
+        self.load_streams()
 
     def create_topology(self):
         """ Define the network topology (Switches & Endstations) """
@@ -35,8 +41,8 @@ class Network:
                 name = row[1]
                 port = row[3]
 
-
-                if row[0] == "LINK": #TODO add the edges
+                #Adds edges
+                if row[0] == "LINK":
                     source_node =row[2]
                     destination_node = row[4]
                     self.graph.add_edge(source_node, destination_node)
@@ -52,7 +58,8 @@ class Network:
 
         # Apply spring layout for better visualization
         pos = nx.spring_layout(self.graph, seed=42, scale=400)  # Adjust scale for spacing
-
+        
+        #TODO Make dynamically scaleable, so given a large network, the spacing should be bigger.
         # Store computed positions in the graph with an offset to center them
         for node, (x, y) in pos.items():
             self.graph.nodes[node]["pos"] = (x + 50, y + 50)  # Adjust offsets
@@ -63,9 +70,32 @@ class Network:
         #     "Stream2": ["E1", "S1", "S3", "E2"]
         # }
 
-    def get_stream_path(self, stream_name):
-        return self.streams.get(stream_name, [])
+    def load_streams(self):
+        """ Load streams from CSV and compute shortest paths """
+        with open(streamsCSV, "r") as f:
+            reader = csv.reader(f)
+            next(reader)  # Skip header row
+            for row in reader:
+                stream_name = row[1]
+                source_node = row[3]
+                destination_node = row[4]
 
+                if source_node in self.graph and destination_node in self.graph:
+                    try:
+                        path = nx.shortest_path(self.graph, source=source_node, target=destination_node)
+                    except nx.NetworkXNoPath:
+                        path = ["No Path Found"]
+                else:
+                    path = ["Invalid Nodes"]
+
+                self.streams[stream_name] = Stream(stream_name, source_node, destination_node)
+                self.streams[stream_name].path = path
+                print(path)
+
+    def get_stream_path(self, stream_name):
+        """ Retrieve the shortest path for a given stream """
+        return self.streams.get(stream_name, Stream("", "", "")).path
+    
 class NodeItem(QGraphicsEllipseItem):
     def __init__(self, node: Node, x, y):
         super().__init__(x - 10, y - 10, 20, 20)  # Circle shape
