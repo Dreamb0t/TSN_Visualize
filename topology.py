@@ -5,8 +5,8 @@ from PyQt5.QtWidgets import QApplication, QMainWindow, QGraphicsScene, QGraphics
 from PyQt5.QtGui import QPen, QBrush, QFont
 from PyQt5.QtCore import Qt
 
-topologyCSV = "topology_big.csv"
-streamsCSV = "stream_big.csv"
+topologyCSV = "topology.csv"
+streamsCSV = "streams.csv"
 
 class Stream:
     def __init__(self, name, source_node, destination_node):
@@ -64,13 +64,8 @@ class Network:
         for node, (x, y) in pos.items():
             self.graph.nodes[node]["pos"] = (x + 50, y + 50)  # Adjust offsets
 
-        # Predefine paths (Streams)
-        # self.streams = {
-        #     "Stream1": ["E1", "S1", "S2", "S3", "E2"],
-        #     "Stream2": ["E1", "S1", "S3", "E2"]
-        # }
-
     def load_streams(self):
+        #TODO
         """ Load streams from CSV and compute shortest paths """
         with open(streamsCSV, "r") as f:
             reader = csv.reader(f)
