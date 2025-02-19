@@ -10,9 +10,9 @@ class Node:
         return f"{self.name} ({self.type}, Port: {self.port})"
     
 class EndStation(Node):
-    def __init__(self, name):
-        super().__init__(name, NodeType.ENDSTATION)
-
+    def __init__(self, name, port):
+        super().__init__(name, NodeType.ENDSTATION, port)
+        self.arrivals = []
 
 
     def __str__(self):
@@ -24,8 +24,8 @@ class EndStation(Node):
 
 # Switch class extends Node and stores a reference to the preceding node and package send info.
 class Switch(Node):
-    def __init__(self, name):
-        super().__init__(name, NodeType.SWITCH)
+    def __init__(self, name, port):
+        super().__init__(name, NodeType.SWITCH, port)
         self.preceding_node = None  # Reference to the node immediately before this switch.
         self.sent_packages = []     # List of package send events.
 

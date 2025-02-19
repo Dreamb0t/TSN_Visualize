@@ -2,13 +2,15 @@ from PyQt5.QtGui import QPen, QBrush, QFont
 from PyQt5.QtWidgets import QApplication, QMainWindow, QGraphicsScene, QGraphicsView, QGraphicsEllipseItem, QGraphicsTextItem, QVBoxLayout, QHBoxLayout, QWidget, QComboBox, QPushButton
 from PyQt5.QtGui import QPen, QBrush, QFont
 from PyQt5.QtCore import Qt
+import networkx as nx
+from enums.deviceEnums import NodeType
 from .nodeClass import Node
 
 class NodeItem(QGraphicsEllipseItem):
     def __init__(self, node: Node, x, y):
         super().__init__(x - 10, y - 10, 20, 20)  # Circle shape
         self.node = node  # Store the Node instance
-        self.setBrush(QBrush(Qt.blue if node.type == "SW" else Qt.green))
+        self.setBrush(QBrush(Qt.blue if node.type == NodeType.SWITCH else Qt.green))
         self.setFlag(QGraphicsEllipseItem.ItemIsSelectable)
 
         # Create a label for the node
@@ -18,9 +20,10 @@ class NodeItem(QGraphicsEllipseItem):
         self.label.setPos(x-10, y-30)
 
     def mousePressEvent(self, event):
-        print(f"Clicked on: {self.node.name}, Type: {self.node.type}, Port: {self.node.port}")
+        print(f"Clicked on: {self.node.name}, Type: {self.node.type.value}, Port: {self.node.port}")
         self.window2 = SecondUI(self.node.name)  # Store a reference on 'self'
         self.window2.show()
+
 
 class UI(QMainWindow):
     def __init__(self, network):
@@ -70,17 +73,26 @@ class UI(QMainWindow):
         """ Render the network topology """
         self.node_items = {}
         self.edge_items = {}
+                # Adding links (Modify as needed)
 
+        # Apply spring layout for better visualization
+        pos = nx.spring_layout(self.network.graph, seed=42, scale=200)  # Adjust scale for spacing
+        
+        #TODO Make dynamically scaleable, so given a large network, the spacing should be bigger.
+        # Store computed positions in the graph with an offset to center them
+        for node, (x, y) in pos.items():
+            self.network.graph.nodes[node]["pos"] = (x + 50, y + 50)  # Adjust offsets
         # Draw edges
         for edge in self.network.graph.edges:
             node1, node2 = edge
-            x1, y1 = self.network.graph.nodes[node1]['pos']
-            x2, y2 = self.network.graph.nodes[node2]['pos']
+            x1, y1 = self.network.graph.nodes[node1.name]['pos']
+            x2, y2 = self.network.graph.nodes[node2.name]['pos']
             line = self.scene.addLine(x1, y1, x2, y2, QPen(Qt.black, 2))
             self.edge_items[edge] = line
 
         # Draw nodes
-        for node_name, data in self.network.graph.nodes(data=True):
+        test = self.network.graph.nodes(data=True)
+        for node_name, data in test:
             if "node_obj" not in data:
                 print(f"Warning: Missing node data for {node_name}")  # Debugging
                 continue  # Skip this node

@@ -1,9 +1,9 @@
 import networkx as nx
 import csv
 
-from .nodeClass import Node
+from .nodeClass import Node, Switch, EndStation
 from .streamClass import Stream
-
+from enums.deviceEnums import NodeType
 
 class Network:
     def __init__(self, topologyCsv, streamCsv):
@@ -19,31 +19,50 @@ class Network:
             reader = csv.reader(f)
             for row in reader:
                 type = row[0]
-                name = row[1]
-                port = row[3]
+                if type == NodeType.LINK.value:
+                    source_node_name = row[2]
+                    source_port = row[3]
+                    if source_node_name not in self.nodes:
+                        if source_node_name.startswith(NodeType.SWITCH.value):
+                            source_node = Switch(source_node_name, source_port)
+                            self.nodes[source_node_name] = source_node
+                            print("LINKING NODE")
+                        else:
+                            source_node = EndStation(source_node_name, source_port)
+                            print("LINKING NODE")
+                    destination_node_name = row[4]
+                    destination_node_port = row[5]
+                    if destination_node_name not in self.nodes:
+                        if destination_node_name.startswith(NodeType.SWITCH.value):
+                            destination_node = Switch(destination_node_name,destination_node_port)
+                            self.nodes[destination_node_name] = destination_node
+                            print("LINKING NODE")
+                        else:
+                            destination_node = EndStation(destination_node_name,destination_node_port)
+                            print("LINKING NODE")
+                            self.nodes[destination_node_name] = destination_node
+                    test1 = self.nodes[source_node_name]
+                    test2 = self.nodes[destination_node_name]
+                    self.graph.add_edge(test1, test2)
+                    #print(self.graph.edges)
+                elif type == NodeType.SWITCH.value:
+                    name = row[1]
+                    port = row[3]
+                    switch = Switch(name, port)
+                    self.nodes[switch.name] = switch
+                    self.graph.add_node(switch.name, node_obj=switch)
+                    print(switch)
+                elif type == NodeType.ENDSTATION.value:
+                    name = row[1]
+                    port = row[3]
+                    es = EndStation(name, port)
+                    self.nodes[es.name] = es
+                    self.graph.add_node(es.name, node_obj=es)
+                    print(es)
 
-                #Adds edges
-                if row[0] == "LINK":
-                    source_node =row[2]
-                    destination_node = row[4]
-                    self.graph.add_edge(source_node, destination_node)
+
                 
-                else:
-                    node = Node(name, type, port)  # Create a Node object
-                    self.nodes[node.name] = node  # Store Node object
-                    self.graph.add_node(node.name, node_obj=node)
 
-                print(node)
-                
-        # Adding links (Modify as needed)
-
-        # Apply spring layout for better visualization
-        pos = nx.spring_layout(self.graph, seed=42, scale=400)  # Adjust scale for spacing
-        
-        #TODO Make dynamically scaleable, so given a large network, the spacing should be bigger.
-        # Store computed positions in the graph with an offset to center them
-        for node, (x, y) in pos.items():
-            self.graph.nodes[node]["pos"] = (x + 50, y + 50)  # Adjust offsets
 
     def load_streams(self, streamsCSV):
         #TODO
@@ -53,8 +72,8 @@ class Network:
             next(reader)  # Skip header row
             for row in reader:
                 stream_name = row[1]
-                source_node = row[3]
-                destination_node = row[4]
+                source_node = self.nodes[row[3]]
+                destination_node = self.nodes[row[4]]
 
                 if source_node in self.graph and destination_node in self.graph:
                     try:
@@ -66,7 +85,7 @@ class Network:
 
                 self.streams[stream_name] = Stream(stream_name, source_node, destination_node)
                 self.streams[stream_name].path = path
-                print(path)
+                #print(path)
 
     def get_stream_path(self, stream_name):
         """ Retrieve the shortest path for a given stream """
