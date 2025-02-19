@@ -32,7 +32,6 @@ class Node:
 #     def __str__(self):
 #         return super().__str__() + ", format is of " + f"{self.format}"
 
-#TODO this needs to be move to another file once the general structure is in place to make the code look better.
 
 class Network:
     def __init__(self):
