@@ -5,6 +5,7 @@ from PyQt5.QtWidgets import QApplication, QMainWindow, QGraphicsScene, QGraphics
 from PyQt5.QtGui import QPen, QBrush, QFont
 from PyQt5.QtCore import Qt
 
+topologyCSV = "topology_test.csv"
 
 #Node class to encapsulate switches and end statsion. Idea is this is the parent for when we need to distinguish
 #between the child classes Paul Pop's format (PP) and Comcores'(CC) nodes.
@@ -45,7 +46,7 @@ class Network:
         node_list = []
         #TODO make a guide, that tells the user, the csv file should be called something specific 
         #(maybe also have a dedicated path) in the folder
-        with open("topology.csv", "r") as f:
+        with open(topologyCSV, "r") as f:
             reader = csv.reader(f)
             #CSV has format (DeviceType,DeviceName,Ports)
             for row in reader:
@@ -68,6 +69,7 @@ class Network:
             node_positions[node.name] = (x, y)
             self.graph.add_node(node.name, pos=(x, y), type=node.type)
             x += spacing  # Shift position for the next node
+            self.graph
 
         # Adding nodes
         # self.graph.add_node("S1", pos=(100, 100), type="Switch")
@@ -77,7 +79,8 @@ class Network:
         # self.graph.add_node("E2", pos=(500, 250), type="EndStation")
 
         # Adding links
-        self.graph.add_edges_from([("S1", "S2"), ("S2", "S3"), ("S1", "E1"), ("S3", "E2"), ("S2", "E2")])
+        # self.graph.add_edges_from([("S1", "S2"), ("S2", "S3"), ("S1", "E1"), ("S3", "E2"), ("S2", "E2")])
+        self.graph.add_edges_from([("sw_0_0","sw_0_3"),("sw_0_3","sw_0_5")])
 
         # Predefine paths (Streams)
         self.streams = {
@@ -170,7 +173,7 @@ class UI(QMainWindow):
         # Draw edges (Links)
         for edge in self.network.graph.edges:
             node1, node2 = edge
-            x1, y1 = self.network.graph.nodes[node1]
+            x1, y1 = self.network.graph.nodes[node1]['pos']
             x2, y2 = self.network.graph.nodes[node2]['pos']
             line = self.scene.addLine(x1, y1, x2, y2, QPen(Qt.black, 2))
             self.edge_items[edge] = line
