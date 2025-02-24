@@ -1,3 +1,4 @@
+from enums.deviceEnums import NodeType
 from .nodeClass import EndStation
 class Stream:
     """
@@ -13,7 +14,7 @@ class Stream:
         period (int): Period of the stream (in units specified in the configuration file).
         deadline (int): Deadline of the stream (in units specified in the configuration file).
     """
-    def __init__(self, pcp, stream_name, stream_type, source_node:EndStation, destination_node:EndStation, size, period, deadline):
+    def __init__(self, pcp, stream_name, stream_type : NodeType, source_node : EndStation, destination_node : EndStation, size, period, deadline):
         self.pcp = int(pcp)  # Ensuring PCP is stored as an integer.
         self.stream_name = stream_name
         self.stream_type = stream_type
